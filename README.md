@@ -1,4 +1,8 @@
-CLONEBOT is a chatbot built on Ollama (gpt-oss:20b) that doesn't just run the model — it wraps it in an intelligent system. Advanced context management, reasoning chains, a suite of tools — everything is tuned to squeeze the maximum from an open-source LLM and bring the experience close to frontier models. No subscriptions. No API keys. No compromises on privacy. Just your hardware, your data, your control.
+CLONEBOT is a chatbot built on Ollama (gpt-oss:20b) that doesn't just run the model — it wraps it in an intelligent system. Advanced context management, reasoning chains, a suite of tools — everything is tuned to squeeze the maximum from an open-source LLM and bring the experience close to frontier models. 
+
+No subscriptions. No API keys. No compromises on privacy. 
+
+Just your hardware, your data, your control.
 
 
 <img width="1590" height="928" alt="Screenshot" src="https://github.com/user-attachments/assets/9945b4a8-d0dc-4460-ba36-200957aadbd9" />
