@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f0;
+  --bg-tertiary: #ebebef;
+  --bg-input: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --border: #e5e5e5;
+  --accent: #c57b3c;
+  --accent-hover: #b06a2f;
+  --user-bubble: #f4f4f4;
+  --assistant-bg: #f5f5f0;
+  --code-bg: #f5f5f5;
+  --error: #dc3545;
+  --success: #28a745;
+  --warning: #ffc107;
+}
+
+.dark {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2a2a2a;
+  --bg-tertiary: #3a3a3a;
+  --bg-input: #2a2a2a;
+  --text-primary: #f5f5f5;
+  --text-secondary: #a0a0a0;
+  --text-tertiary: #707070;
+  --border: #3a3a3a;
+  --accent: #d4a574;
+  --accent-hover: #c49564;
+  --user-bubble: #3a3a3a;
+  --assistant-bg: #2a2a2a;
+  --code-bg: #23233d;
+  --error: #ff6b6b;
+  --success: #51cf66;
+  --warning: #ffd43b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Streaming cursor */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.streaming-cursor::after {
+  content: '\u258C';
+  animation: blink 1s infinite;
+  color: var(--accent);
+  margin-left: 1px;
+}
+
+/* Code blocks */
+pre {
+  background: var(--code-bg) !important;
+  border-radius: 8px;
+  padding: 16px !important;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+:not(pre) > code {
+  background: var(--code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Message fade-in */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-appear {
+  animation: fadeInUp 200ms ease-out;
+}

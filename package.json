@@ -1,0 +1,59 @@
+{
+  "name": "clonebot-message-bus",
+  "version": "1.0.0",
+  "description": "Message Bus module for inter-module communication",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "checkpoint": "ts-node src/integration-checkpoint.ts",
+    "checkpoint:telegram": "ts-node src/telegram-checkpoint.ts",
+    "checkpoint:browser": "ts-node src/browser-checkpoint.ts",
+    "checkpoint:memory": "ts-node src/memory-checkpoint.ts",
+    "checkpoint:full": "ts-node src/integration-full-checkpoint.ts",
+    "test:skill-registry": "ts-node src/skill-registry-test.ts",
+    "example:skill-registry": "ts-node src/skill-registry-example.ts",
+    "cli": "ts-node cli.ts",
+    "chat": "ts-node src/cli-chat.ts",
+    "start": "node --env-file=.env -r ts-node/register src/telegram-bot-simple.ts",
+    "start:legacy": "ts-node cli.ts telegram",
+    "start:test": "ts-node cli.ts test",
+    "start:gateway": "node --env-file=.env -r ts-node/register src/gateway-bot.ts",
+    "web": "ts-node src/web-ui-server.ts",
+    "web:dev": "WEB_PORT=3000 ts-node src/web-ui-server.ts"
+  },
+  "keywords": [
+    "message-bus",
+    "pub-sub",
+    "events"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "form-data": "^4.0.0"
+  },
+  "optionalDependencies": {
+    "cheerio": "^1.2.0",
+    "heic-convert": "^2.1.0",
+    "mammoth": "^1.11.0",
+    "pdf-parse": "^1.1.4",
+    "sharp": "^0.33.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/form-data": "^2.5.0",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.10.6",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/ws": "^8.18.1",
+    "commander": "^14.0.3",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "ws": "^8.19.0"
+  }
+}

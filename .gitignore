@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.js
+*.d.ts
+*.js.map
+*.d.ts.map
+
+# Except config files
+!jest.config.js
+!web/**
+
+# Test coverage
+coverage/
+*.lcov
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Personal chats & sessions
+data/chats.json
+data/chats/
+sessions/
+
+# Web UI
+web/.next/
+web/node_modules/
+
+art/
+
+# Local data and personal artifacts
+data/projects/
+data/artifacts/
+data/memory/
+logs/
+.browser-data/
+.claude/
+.gemini/
+.zencoder/
+.zenflow/

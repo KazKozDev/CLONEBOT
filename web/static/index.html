@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLONEBOT</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fdba74' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M8 14s1.5 2 4 2 4-2 4-2'/><line x1='9' y1='9' x2='9.01' y2='9'/><line x1='15' y1='9' x2='15.01' y2='9'/></svg>">
+    <link rel="stylesheet" href="/style.css?v=26">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                        <line x1="9" y1="9" x2="9.01" y2="9" />
+                        <line x1="15" y1="9" x2="15.01" y2="9" />
+                    </svg>
+                    <span>CLONEBOT</span>
+                </div>
+                <button class="sidebar-btn" title="New chat" onclick="startNewChatAndNavigate()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-nav="chat" onclick="navigateToChat()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    <span>Новый чат</span>
+                </div>
+                <div class="nav-item" data-nav="projects" onclick="navigateToProjects()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                    </svg>
+                    <span>Проекты</span>
+                </div>
+            </nav>
+
+            <div class="nav-divider"></div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Чаты</div>
+                <div id="sidebarChats"></div>
+            </div>
+
+            <div class="nav-divider"></div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Проекты</div>
+                <div id="sidebarProjects"></div>
+            </div>
+
+            <!-- Settings button pinned to bottom -->
+            <div class="sidebar-footer">
+                <div class="nav-item" onclick="openSettings()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                    </svg>
+                    <span>Settings</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Settings Modal -->
+        <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+            <div class="settings-modal">
+                <div class="settings-header">
+                    <h2>Settings</h2>
+                    <button class="settings-close-btn" onclick="closeSettings()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="settings-body">
+                    <div class="settings-sidebar">
+                        <div class="settings-tab active" data-tab="general" onclick="switchSettingsTab('general')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                            </svg>
+                            General
+                        </div>
+                        <div class="settings-tab" data-tab="connectors" onclick="switchSettingsTab('connectors')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 11a9 9 0 0118 0" />
+                                <path d="M4 4a16 16 0 0118 0" />
+                                <circle cx="12" cy="11" r="1" />
+                                <path d="M12 12v9" />
+                            </svg>
+                            Connectors
+                        </div>
+                        <div class="settings-tab" data-tab="memory" onclick="switchSettingsTab('memory')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2a10 10 0 0110 10 10 10 0 01-10 10A10 10 0 012 12 10 10 0 0112 2z" />
+                                <path d="M12 6v6l4 2" />
+                            </svg>
+                            Memory
+                        </div>
+                        <div class="settings-tab" data-tab="skills" onclick="switchSettingsTab('skills')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                            </svg>
+                            Skills
+                        </div>
+                        <div class="settings-tab" data-tab="soul" onclick="switchSettingsTab('soul')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M12 21C12 21 4 13.5 4 8.5C4 5.42 6.42 3 9.5 3C11.24 3 12 4 12 4C12 4 12.76 3 14.5 3C17.58 3 20 5.42 20 8.5C20 13.5 12 21 12 21Z" />
+                            </svg>
+                            Soul
+                        </div>
+                    </div>
+
+                    <div class="settings-content">
+                        <!-- General Tab -->
+                        <div class="settings-panel active" id="settingsGeneral">
+                            <h3 class="settings-section-title">Model</h3>
+                            <div class="settings-field">
+                                <label>Default model</label>
+                                <select id="settingsDefaultModel" class="settings-select">
+                                    <!-- populated by JS -->
+                                </select>
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <h3 class="settings-section-title">Interface</h3>
+                            <div class="settings-field">
+                                <div class="settings-field-row">
+                                    <div>
+                                        <label>Deep Thinking by default</label>
+                                        <span class="settings-field-desc">Enable extended thinking mode for all new
+                                            chats</span>
+                                    </div>
+                                    <label class="settings-toggle">
+                                        <input type="checkbox" id="settingsDeepThinking">
+                                        <span class="settings-toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <h3 class="settings-section-title">Data</h3>
+                            <div class="settings-field">
+                                <div class="settings-field-row">
+                                    <div>
+                                        <label>User ID</label>
+                                        <span class="settings-field-desc">Your unique identifier for memory and
+                                            profiles</span>
+                                    </div>
+                                    <input type="text" id="settingsUserId" class="settings-input" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connectors Tab -->
+                        <div class="settings-panel" id="settingsConnectors">
+                            <div class="settings-panel-header">
+                                <div>
+                                    <h3 class="settings-section-title">MCP Servers</h3>
+                                    <p class="settings-section-desc">Connect external tools via Model Context Protocol
+                                        servers</p>
+                                </div>
+                                <button class="settings-btn-primary" onclick="showAddMcpModal()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    Add
+                                </button>
+                            </div>
+
+                            <div id="mcpServersList" class="mcp-servers-list">
+                                <!-- populated by JS -->
+                            </div>
+
+                            <div id="mcpEmptyState" class="mcp-empty-state">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M4 11a9 9 0 0118 0" />
+                                    <path d="M4 4a16 16 0 0118 0" />
+                                    <circle cx="12" cy="11" r="1" />
+                                    <path d="M12 12v9" />
+                                </svg>
+                                <p>No MCP servers connected</p>
+                                <span>Add an MCP server to extend your assistant with external tools</span>
+                            </div>
+                        </div>
+
+                        <!-- Memory Tab -->
+                        <div class="settings-panel" id="settingsMemory">
+                            <h3 class="settings-section-title">Memory & Profiles</h3>
+                            <p class="settings-section-desc">Manage your stored data and user profile</p>
+
+                            <div class="settings-divider"></div>
+
+                            <div class="settings-field">
+                                <div class="settings-field-row">
+                                    <div>
+                                        <label>Active sessions</label>
+                                        <span class="settings-field-desc">Number of active memory sessions</span>
+                                    </div>
+                                    <span id="memorySessionCount" class="settings-value">-</span>
+                                </div>
+                            </div>
+
+                            <div class="settings-field">
+                                <div class="settings-field-row">
+                                    <div>
+                                        <label>Profile facts</label>
+                                        <span class="settings-field-desc">Stored facts about you</span>
+                                    </div>
+                                    <span id="memoryFactCount" class="settings-value">-</span>
+                                </div>
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <button class="settings-btn-danger" onclick="cleanupMemory()">Clear old sessions</button>
+                        </div>
+
+                        <!-- Skills Tab -->
+                        <div class="settings-panel" id="settingsSkills">
+                            <div class="settings-panel-header">
+                                <div>
+                                    <h3 class="settings-section-title">Skills</h3>
+                                    <p class="settings-section-desc">Reusable prompt templates invocable via /skill-name
+                                    </p>
+                                </div>
+                                <button class="settings-btn-primary" onclick="showSkillModal()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    Add
+                                </button>
+                            </div>
+
+                            <div id="skillsList" class="skills-list">
+                                <!-- populated by JS -->
+                            </div>
+
+                            <div id="skillsEmptyState" class="mcp-empty-state">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path
+                                        d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
+                                </svg>
+                                <p>No skills configured</p>
+                                <span>Add a skill to create reusable prompt templates for your assistant</span>
+                            </div>
+                        </div>
+
+                        <!-- Soul Tab -->
+                        <div class="settings-panel" id="settingsSoul">
+                            <h3 class="settings-section-title">Personality Traits</h3>
+                            <p class="settings-section-desc">Traits evolve every 50 interactions based on conversation
+                                sentiment</p>
+                            <div id="soulTraitsList" class="soul-traits-list">
+                                <!-- populated by JS -->
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <h3 class="settings-section-title">Emotional State</h3>
+                            <div class="soul-emotional-row">
+                                <div class="soul-emotional-item">
+                                    <span class="soul-label">Mood</span>
+                                    <span id="soulMood" class="soul-mood-badge">neutral</span>
+                                </div>
+                                <div class="soul-emotional-item">
+                                    <span class="soul-label">Energy</span>
+                                    <div class="soul-energy-wrap">
+                                        <div class="soul-trait-bar">
+                                            <div id="soulEnergyFill" class="soul-trait-fill" style="width:80%"></div>
+                                        </div>
+                                        <span id="soulEnergyValue" class="soul-trait-value">0.80</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <h3 class="settings-section-title">Interactions</h3>
+                            <div class="soul-stats-grid">
+                                <div class="soul-stat-card">
+                                    <span class="soul-stat-number" id="soulTotalInteractions">0</span>
+                                    <span class="soul-stat-label">Total</span>
+                                </div>
+                                <div class="soul-stat-card">
+                                    <span class="soul-stat-number soul-stat-positive"
+                                        id="soulPositiveInteractions">0</span>
+                                    <span class="soul-stat-label">Positive</span>
+                                </div>
+                                <div class="soul-stat-card">
+                                    <span class="soul-stat-number soul-stat-negative"
+                                        id="soulNegativeInteractions">0</span>
+                                    <span class="soul-stat-label">Negative</span>
+                                </div>
+                                <div class="soul-stat-card">
+                                    <span class="soul-stat-number" id="soulEvolutionCount">0</span>
+                                    <span class="soul-stat-label">Evolutions</span>
+                                </div>
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <h3 class="settings-section-title">Evolution History</h3>
+                            <div id="soulHistoryList" class="soul-history-list">
+                                <div class="soul-history-empty">No evolutions yet — evolves every 50 interactions</div>
+                            </div>
+
+                            <div class="settings-divider"></div>
+
+                            <button class="settings-btn-danger" onclick="resetSoul()">Reset to defaults</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add MCP Server Modal -->
+        <div class="settings-overlay" id="mcpAddOverlay" onclick="if(event.target===this)closeMcpModal()">
+            <div class="settings-modal mcp-add-modal">
+                <div class="settings-header">
+                    <h2>Add MCP Server</h2>
+                    <button class="settings-close-btn" onclick="closeMcpModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="mcp-add-body">
+                    <div class="settings-field">
+                        <label>Name</label>
+                        <input type="text" id="mcpName" class="settings-input" placeholder="e.g. filesystem">
+                    </div>
+                    <div class="settings-field">
+                        <label>Transport</label>
+                        <select id="mcpTransport" class="settings-select" onchange="onMcpTransportChange()">
+                            <option value="stdio">stdio</option>
+                            <option value="sse">SSE (HTTP)</option>
+                        </select>
+                    </div>
+                    <div id="mcpStdioFields">
+                        <div class="settings-field">
+                            <label>Command</label>
+                            <input type="text" id="mcpCommand" class="settings-input" placeholder="e.g. npx">
+                        </div>
+                        <div class="settings-field">
+                            <label>Arguments</label>
+                            <input type="text" id="mcpArgs" class="settings-input"
+                                placeholder='e.g. -y @modelcontextprotocol/server-filesystem /path'>
+                            <span class="settings-field-desc">Space-separated arguments</span>
+                        </div>
+                    </div>
+                    <div id="mcpSseFields" style="display:none">
+                        <div class="settings-field">
+                            <label>URL</label>
+                            <input type="text" id="mcpUrl" class="settings-input"
+                                placeholder="http://localhost:3000/sse">
+                        </div>
+                    </div>
+                    <div class="settings-field">
+                        <label>Environment Variables <span class="settings-field-desc">(optional, JSON)</span></label>
+                        <textarea id="mcpEnv" class="settings-textarea" rows="3"
+                            placeholder='{"API_KEY": "..."}'></textarea>
+                    </div>
+                    <div class="mcp-add-actions">
+                        <button class="settings-btn-secondary" onclick="closeMcpModal()">Cancel</button>
+                        <button class="settings-btn-primary" onclick="addMcpServer()">Add Server</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skill Add/Edit Modal -->
+        <div class="settings-overlay" id="skillModalOverlay" onclick="if(event.target===this)closeSkillModal()">
+            <div class="settings-modal skill-modal">
+                <div class="settings-header">
+                    <h2 id="skillModalTitle">Add Skill</h2>
+                    <button class="settings-close-btn" onclick="closeSkillModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="skill-modal-body">
+                    <div class="settings-field">
+                        <label>Name</label>
+                        <input type="text" id="skillName" class="settings-input" placeholder="e.g. code-review">
+                        <span class="settings-field-desc">Alphanumeric, hyphens, underscores. Used as /skill-name
+                            command</span>
+                    </div>
+                    <div class="settings-field">
+                        <label>Content <span class="settings-field-desc">(Markdown)</span></label>
+                        <textarea id="skillContent" class="settings-textarea skill-content-textarea" rows="12"
+                            placeholder="# Skill Name&#10;&#10;Describe the skill instructions here in Markdown..."></textarea>
+                    </div>
+                    <div class="skill-modal-actions">
+                        <button class="settings-btn-secondary" onclick="closeSkillModal()">Cancel</button>
+                        <button class="settings-btn-primary" id="skillModalSaveBtn" onclick="saveSkill()">Add
+                            Skill</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skill Delete Confirmation Modal -->
+        <div class="settings-overlay" id="skillDeleteOverlay" onclick="if(event.target===this)closeSkillDeleteModal()">
+            <div class="settings-modal skill-delete-modal">
+                <div class="settings-header">
+                    <h2>Delete Skill</h2>
+                    <button class="settings-close-btn" onclick="closeSkillDeleteModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="skill-modal-body">
+                    <p>Are you sure you want to delete the skill "<strong id="skillDeleteName"></strong>"?</p>
+                    <p class="settings-field-desc">This action cannot be undone.</p>
+                    <div class="skill-modal-actions">
+                        <button class="settings-btn-secondary" onclick="closeSkillDeleteModal()">Cancel</button>
+                        <button class="settings-btn-danger" id="skillDeleteConfirmBtn"
+                            onclick="confirmDeleteSkill()">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Area -->
+        <main class="main">
+            <!-- Chat -->
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-messages-inner" id="chatMessagesInner">
+                        <!-- Messages will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <div class="chat-input-box">
+                            <div class="chat-input-main">
+                                <textarea id="chatInput" placeholder="Reply..." rows="1"></textarea>
+                                <div class="input-actions">
+                                    <button class="deep-thinking-toggle" id="deepThinkingToggle"
+                                        title="🧠 Deep Thinking Mode">🧠</button>
+                                    <button id="sendBtn" class="send-btn">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <path d="M5 12h14M12 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="chat-input-footer">
+                                <div class="model-dropdown" id="modelDropdown">
+                                    <button class="model-selector" id="modelSelector">
+                                        <span id="modelName">gpt-oss:20b</span>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M6 9l6 6 6-6" />
+                                        </svg>
+                                    </button>
+                                    <div class="model-dropdown-menu" id="modelMenu">
+                                        <div class="model-list" id="modelList">
+                                            <!-- Models will be loaded here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resize Handle -->
+            <div class="resize-handle visible" id="resizeHandle"></div>
+
+            <!-- Artifact Panel -->
+            <div class="artifact-panel open" id="artifactPanel">
+                <div class="artifact-header">
+                    <div class="artifact-header-left">
+                        <div class="artifact-title-group">
+                            <span class="artifact-name" id="artifactName">Untitled</span>
+                            <span class="artifact-type" id="artifactType">PY</span>
+                        </div>
+                    </div>
+                    <div class="artifact-header-right">
+                        <button class="artifact-header-btn" id="copyBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                            </svg>
+                            Copy
+                        </button>
+                        <button class="close-btn" id="closeArtifact">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="artifact-content">
+                    <div class="artifact-empty" id="artifactEmpty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14,2 14,8 20,8" />
+                        </svg>
+                        <div>Нет артефактов</div>
+                        <div>Откройте артефакт из чата, чтобы увидеть его здесь</div>
+                    </div>
+                    <iframe id="artifactIframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                    <div id="artifactCode">
+                        <div class="code-wrapper">
+                            <div class="line-numbers" id="lineNumbers"></div>
+                            <div class="code-content" id="codeContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+    <script src="/app.js?v=32"></script>
+    <script src="/projects.js?v=25"></script>
+</body>
+
+</html>
