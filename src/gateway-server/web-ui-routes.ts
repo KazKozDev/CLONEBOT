@@ -17,6 +17,7 @@ import type { AgentLoop } from '../agent-loop';
 import type { UserProfileStore } from '../user-profile';
 import type { MemoryStore } from '../memory-store';
 import type { AgentLoopIntegration } from '../skill-registry/agent-loop-integration';
+import { getProjectRAGService, type ProjectRAGService } from '../project-rag';
 
 // -----------------------------------------------------------------------------
 // Types
@@ -77,6 +78,109 @@ async function generateChatTitle(message: string, model: string = 'qwen3:1.7b'):
         return data.response?.trim().replace(/^["']|["']$/g, '').substring(0, 60) || message.substring(0, 50);
     } catch {
         return message.substring(0, 50);
+    }
+}
+
+type SoulTraits = Record<string, number>;
+
+interface SoulState {
+    traits: SoulTraits;
+    emotional_state: { mood: string; energy: number };
+    stats: {
+        total_interactions: number;
+        positive_interactions: number;
+        negative_interactions: number;
+    };
+    evolution_history: Array<{
+        timestamp: string;
+        interaction_count: number;
+        changes: Record<string, string>;
+    }>;
+}
+
+const DEFAULT_SOUL: SoulState = {
+    traits: {
+        friendliness: 0.7,
+        creativity: 0.6,
+        formality: 0.5,
+        humor: 0.6,
+        patience: 0.7,
+        curiosity: 0.6,
+        empathy: 0.8,
+        confidence: 0.6,
+    },
+    emotional_state: {
+        mood: 'neutral',
+        energy: 0.7,
+    },
+    stats: {
+        total_interactions: 0,
+        positive_interactions: 0,
+        negative_interactions: 0,
+    },
+    evolution_history: [],
+};
+
+function clamp01(value: number): number {
+    return Math.min(1, Math.max(0, value));
+}
+
+function loadSoulState(dataDir: string): SoulState {
+    const soulPath = path.join(dataDir, 'soul.json');
+    try {
+        if (existsSync(soulPath)) {
+            const raw = readFileSync(soulPath, 'utf8');
+            const parsed = JSON.parse(raw) as SoulState;
+            return {
+                ...DEFAULT_SOUL,
+                ...parsed,
+                traits: { ...DEFAULT_SOUL.traits, ...(parsed.traits || {}) },
+                emotional_state: { ...DEFAULT_SOUL.emotional_state, ...(parsed.emotional_state || {}) },
+                stats: { ...DEFAULT_SOUL.stats, ...(parsed.stats || {}) },
+                evolution_history: parsed.evolution_history || [],
+            };
+        }
+    } catch {
+        // fall through to default
+    }
+
+    return { ...DEFAULT_SOUL, traits: { ...DEFAULT_SOUL.traits }, emotional_state: { ...DEFAULT_SOUL.emotional_state } };
+}
+
+function saveSoulState(dataDir: string, state: SoulState): void {
+    const soulPath = path.join(dataDir, 'soul.json');
+    if (!existsSync(dataDir)) {
+        mkdirSync(dataDir, { recursive: true });
+    }
+    writeFileSync(soulPath, JSON.stringify(state, null, 2), 'utf8');
+}
+
+function evolveSoul(state: SoulState): void {
+    const traitKeys = Object.keys(state.traits);
+    if (traitKeys.length === 0) return;
+
+    const evolutionIndex = Math.floor(state.stats.total_interactions / 50) - 1;
+    if (evolutionIndex < 0) return;
+
+    const traitKey = traitKeys[evolutionIndex % traitKeys.length];
+    const delta = evolutionIndex % 2 === 0 ? 0.02 : -0.02;
+    const previous = state.traits[traitKey] ?? 0.5;
+    const next = clamp01(previous + delta);
+    state.traits[traitKey] = next;
+
+    state.evolution_history.push({
+        timestamp: new Date().toISOString(),
+        interaction_count: state.stats.total_interactions,
+        changes: {
+            [traitKey]: `${delta >= 0 ? '+' : ''}${delta.toFixed(2)} -> ${next.toFixed(2)}`,
+        },
+    });
+}
+
+function recordSoulInteraction(state: SoulState): void {
+    state.stats.total_interactions += 1;
+    if (state.stats.total_interactions % 50 === 0) {
+        evolveSoul(state);
     }
 }
 
@@ -249,6 +353,12 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
     const { dataDir, agentLoop, userProfileStore, memoryStore, skillIntegration } = opts;
     const store = getDataStore(dataDir);
 
+    // Initialize RAG service for semantic search
+    const ragService = getProjectRAGService({ ollamaUrl: 'http://localhost:11434' }, dataDir);
+
+    // Ensure RAG model is ready (pull if needed)
+    ragService.ensureReady().catch(e => console.error('RAG init failed:', e));
+
     // -------------------------------------------------------------------------
     // Models API
     // -------------------------------------------------------------------------
@@ -276,6 +386,14 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
         if (!prompt || typeof prompt !== 'string') {
             res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'prompt is required' } });
             return;
+        }
+
+        try {
+            const soulState = loadSoulState(dataDir);
+            recordSoulInteraction(soulState);
+            saveSoulState(dataDir, soulState);
+        } catch {
+            // ignore soul tracking errors
         }
 
         if (deepThinking) {
@@ -394,6 +512,19 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
                     const project = store.getProject(projectId);
                     if (project?.systemPrompt) {
                         contextOptions.systemPrompt = project.systemPrompt;
+                    }
+
+                    // Add RAG context from project files
+                    try {
+                        const ragContext = await ragService.getContext(projectId, prompt, { topK: 5 });
+                        if (ragContext.context) {
+                            contextOptions.ragContext = ragContext.context;
+                            // Prepend RAG context to system prompt
+                            const ragHeader = `\n\n--- Relevant context from project files ---\n${ragContext.context}\n--- End of context ---\n\n`;
+                            contextOptions.systemPrompt = (contextOptions.systemPrompt || '') + ragHeader;
+                        }
+                    } catch (ragErr: any) {
+                        console.warn('RAG context retrieval failed:', ragErr.message);
                     }
                 }
 
@@ -554,11 +685,27 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
                 }
             }
 
-            // Add project system prompt
+            // Add project system prompt and RAG context
             if (projectId) {
                 const project = store.getProject(projectId);
+                let projectContext = '';
+
                 if (project?.systemPrompt) {
-                    ollamaMessages.push({ role: 'system', content: project.systemPrompt });
+                    projectContext += project.systemPrompt;
+                }
+
+                // Add RAG context from project files
+                try {
+                    const ragContext = await ragService.getContext(projectId, prompt, { topK: 5 });
+                    if (ragContext.context) {
+                        projectContext += `\n\n--- Relevant context from project files ---\n${ragContext.context}\n--- End of context ---\n`;
+                    }
+                } catch (ragErr: any) {
+                    console.warn('RAG context retrieval failed:', ragErr.message);
+                }
+
+                if (projectContext) {
+                    ollamaMessages.push({ role: 'system', content: projectContext });
                 }
             }
 
@@ -797,14 +944,35 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
             id: body.id || `file_${Date.now()}`,
             name: body.name || 'Untitled',
             path: body.path || '',
-            content: body.content
+            content: body.content,
+            size: body.content ? body.content.length : 0,
+            updatedAt: new Date().toISOString()
         };
+
+        // Debug log
+        if (body.content) {
+            console.log(`[Upload] File ${file.name} content length: ${body.content.length}`);
+        } else {
+            console.log(`[Upload] File ${file.name} has NO content`);
+        }
 
         const project = store.addProjectFile(projectId, file);
 
         if (!project) {
             res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
             return;
+        }
+
+        // RAG indexing in background (don't block response)
+        if (file.content && typeof file.content === 'string') {
+            console.log(`[RAG] Starting indexing for ${file.name}...`);
+            ragService.indexFile(projectId, file.id, file.name, file.content)
+                .then(status => {
+                    console.log(`RAG indexed file ${file.name}: ${status.chunksCreated} chunks`);
+                })
+                .catch(err => {
+                    console.warn(`RAG indexing failed for ${file.name}:`, err.message);
+                });
         }
 
         res.status(200).json({ file, project });
@@ -814,6 +982,10 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
         const projectId = req.params.projectId;
         const fileId = req.params.fileId;
 
+        // Get file info before removal for RAG cleanup
+        const projectBefore = store.getProject(projectId);
+        const fileToRemove = projectBefore?.files?.find(f => f.id === fileId);
+
         const project = store.removeProjectFile(projectId, fileId);
 
         if (!project) {
@@ -821,7 +993,97 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
             return;
         }
 
+        // Remove from RAG index
+        if (fileToRemove) {
+            ragService.removeFile(projectId, fileId, fileToRemove.name)
+                .catch(err => console.warn('RAG removal failed:', err.message));
+        }
+
         res.status(200).json({ success: true, project });
+    });
+
+    // -------------------------------------------------------------------------
+    // Project RAG API
+    // -------------------------------------------------------------------------
+
+    // Get RAG index status for a project
+    server.route('GET', '/api/projects/:projectId/rag/status', async (req, res) => {
+        const projectId = req.params.projectId;
+        const status = ragService.getIndexInfo(projectId);
+        res.status(200).json(status);
+    });
+
+    // Search project files using semantic search
+    server.route('POST', '/api/projects/:projectId/rag/search', async (req, res) => {
+        const projectId = req.params.projectId;
+        const body = req.body ?? {};
+        const query = body.query;
+        const topK = body.topK || 5;
+        const minScore = body.minScore || 0.3;
+
+        if (!query) {
+            res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'query is required' } });
+            return;
+        }
+
+        try {
+            const results = await ragService.search(projectId, query, { topK, minScore });
+            res.status(200).json({
+                results: results.map(r => ({
+                    chunk: {
+                        id: r.chunk.id,
+                        fileId: r.chunk.fileId,
+                        fileName: r.chunk.fileName,
+                        content: r.chunk.content,
+                        metadata: r.chunk.metadata,
+                    },
+                    score: r.score,
+                    rank: r.rank,
+                })),
+                query,
+                totalResults: results.length,
+            });
+        } catch (error: any) {
+            res.status(500).json({ error: { code: 'RAG_ERROR', message: error.message } });
+        }
+    });
+
+    // Reindex all project files
+    server.route('POST', '/api/projects/:projectId/rag/reindex', async (req, res) => {
+        const projectId = req.params.projectId;
+        const project = store.getProject(projectId);
+
+        if (!project) {
+            res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Project not found' } });
+            return;
+        }
+
+        const files = (project.files || [])
+            .filter(f => f.content && typeof f.content === 'string')
+            .map(f => ({ id: f.id, name: f.name, content: f.content as string }));
+
+        if (files.length === 0) {
+            res.status(200).json({ message: 'No files to index', indexed: 0 });
+            return;
+        }
+
+        try {
+            const status = await ragService.indexFiles(projectId, files);
+            res.status(200).json({
+                message: 'Indexing complete',
+                indexed: status.totalFiles,
+                chunks: status.totalChunks,
+                files: status.files,
+            });
+        } catch (error: any) {
+            res.status(500).json({ error: { code: 'RAG_ERROR', message: error.message } });
+        }
+    });
+
+    // Check RAG service availability
+    server.route('GET', '/api/rag/status', async (_req, res) => {
+        const available = await ragService.isAvailable();
+        res.status(200).json({ available, embeddingModel: ragService.getModelName() });
     });
 
     // -------------------------------------------------------------------------
@@ -1007,7 +1269,10 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
     }
 
     server.route('GET', '/api/mcp/servers', async (_req, res) => {
-        const servers = loadMcpServers();
+        const servers = loadMcpServers().map((server) => ({
+            ...server,
+            status: server.status || (server.enabled ? 'connected' : 'disconnected')
+        }));
         res.status(200).json({ servers });
     });
 
@@ -1023,7 +1288,8 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
             args: body.args,
             url: body.url,
             env: body.env,
-            enabled: true
+            enabled: true,
+            status: 'connected'
         };
 
         servers.push(newServer);
@@ -1047,6 +1313,7 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
 
         if (mcpServer) {
             mcpServer.enabled = !mcpServer.enabled;
+            mcpServer.status = mcpServer.enabled ? 'connected' : 'disconnected';
             saveMcpServers(servers);
             res.status(200).json({ server: mcpServer });
         } else {
@@ -1059,25 +1326,22 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
     // -------------------------------------------------------------------------
 
     server.route('GET', '/api/soul', async (_req, res) => {
+        const state = loadSoulState(dataDir);
         res.status(200).json({
-            traits: {
-                openness: 0.7,
-                conscientiousness: 0.8,
-                extraversion: 0.5,
-                agreeableness: 0.9,
-                neuroticism: 0.2
-            },
-            mood: 'neutral',
-            energy: 0.8,
-            total_interactions: 0,
-            positive_interactions: 0,
-            negative_interactions: 0,
-            evolution_count: 0,
-            history: []
+            traits: state.traits,
+            emotional_state: state.emotional_state,
+            stats: state.stats,
+            evolution_history: state.evolution_history,
         });
     });
 
     server.route('POST', '/api/soul/reset', async (_req, res) => {
+        const state = loadSoulState(dataDir);
+        const nextState: SoulState = {
+            ...DEFAULT_SOUL,
+            evolution_history: state.evolution_history,
+        };
+        saveSoulState(dataDir, nextState);
         res.status(200).json({ success: true });
     });
 
@@ -1091,7 +1355,21 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
         if (userProfileStore) {
             try {
                 const profile = await userProfileStore.getProfile(userId);
-                const facts = await userProfileStore.recallFacts(userId, { limit: 50 });
+                let facts = await userProfileStore.recallFacts(userId, { limit: 50 });
+
+                // Legacy migration: if user has no facts, try to import from web-user
+                if (facts.length === 0 && userId !== 'web-user') {
+                    try {
+                        const legacyFacts = await userProfileStore.recallFacts('web-user', { limit: 50 });
+                        if (legacyFacts.length > 0) {
+                            profile.facts = legacyFacts.map(f => ({ ...f }));
+                            await userProfileStore.saveProfile(profile);
+                            facts = legacyFacts;
+                        }
+                    } catch {
+                        // ignore legacy migration errors
+                    }
+                }
 
                 res.status(200).json({
                     userId: profile.userId,

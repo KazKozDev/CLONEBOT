@@ -1,0 +1,22 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "provider": {
+        "llama.cpp": {
+            "npm": "@ai-sdk/openai-compatible",
+            "name": "llama-server (local)",
+            "options": {
+                "baseURL": "http://127.0.0.1:8081/v1"
+            },
+            "models": {
+                "gpt-oss-20b": {
+                    "name": "GPT-OSS 20B (Local)",
+                    "limit": {
+                        "context": 32000,
+                        "output": 16000
+                    }
+                }
+            }
+        }
+    },
+    "model": "llama.cpp/gpt-oss-20b"
+}

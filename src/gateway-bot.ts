@@ -388,10 +388,10 @@ async function main() {
       const { registerBrowserTools } = await import('./tool-executor/browser-tools');
       registerBrowserTools(toolExecutor, {
         mode: 'openclaw',
-        openclaw: { headless: true },
+        openclaw: { headless: false }, // Visible browser window
         timeouts: { navigation: 30000, action: 30000, idle: 30000 },
       });
-      console.log('✓ Browser tools registered');
+      console.log('✓ Browser tools registered (visible mode)');
     } catch (error) {
       console.warn('⚠️  Browser tools failed:', error);
     }

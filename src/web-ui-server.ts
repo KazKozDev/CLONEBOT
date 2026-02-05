@@ -219,10 +219,10 @@ async function main() {
             const { registerBrowserTools } = await import('./tool-executor/browser-tools');
             registerBrowserTools(toolExecutor, {
                 mode: 'openclaw',
-                openclaw: { headless: true },
+                openclaw: { headless: false }, // Visible browser window
                 timeouts: { navigation: 30000, action: 30000, idle: 30000 },
             });
-            console.log('✓ Browser tools registered');
+            console.log('✓ Browser tools registered (visible mode)');
         } catch (error) {
             console.warn('⚠️  Browser tools failed:', error);
         }
@@ -256,6 +256,22 @@ async function main() {
         console.log(`✓ Artifact tools registered (${artifactTools.length} tools)`);
     } catch (error) {
         console.warn('⚠️  Artifact tools failed:', error);
+    }
+
+    // ========================================
+    // Initialize MCP Integration
+    // ========================================
+    let mcpManager = null;
+    try {
+        const { initializeMcpIntegration } = await import('./mcp-integration');
+        mcpManager = await initializeMcpIntegration(config.paths.dataDir, toolExecutor);
+        
+        const stats = mcpManager.getStats();
+        if (stats.connectedServers > 0) {
+            console.log(`✓ MCP Integration: ${stats.totalTools} tools from ${stats.connectedServers} server(s)`);
+        }
+    } catch (error) {
+        console.warn('⚠️  MCP Integration failed:', error);
     }
 
     // ========================================
@@ -413,6 +429,13 @@ async function main() {
     process.on('SIGINT', async () => {
         console.log('');
         console.log('🛑 Shutting down...');
+        
+        // Disconnect MCP servers
+        if (mcpManager) {
+            console.log('  Disconnecting MCP servers...');
+            await mcpManager.disconnectAll();
+        }
+        
         await gateway.stop();
         console.log('✅ Shutdown complete');
         process.exit(0);

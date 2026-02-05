@@ -38,6 +38,8 @@ export interface ProjectFile {
     name: string;
     path: string;
     content?: string;
+    size?: number;
+    updatedAt?: string;
 }
 
 export interface Project {

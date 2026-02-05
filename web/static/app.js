@@ -144,7 +144,7 @@ async function saveCurrentChat() {
     }
 
     // Generate title using LLM for the first save (when messages.length <= 2)
-    let title = 'Новый чат';
+    let title = 'New chat';
     const firstUserMsg = chatState.messages.find(m => m.role === 'user');
 
     // Check if this is the first exchange (user + assistant messages)
@@ -285,7 +285,7 @@ function updateSidebarChats() {
     const recentChats = chatState.chats.slice(0, 10);
 
     if (recentChats.length === 0) {
-        container.innerHTML = '<div class="sidebar-empty">Нет чатов</div>';
+        container.innerHTML = '<div class="sidebar-empty">No chats</div>';
         return;
     }
 
@@ -294,7 +294,7 @@ function updateSidebarChats() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             </svg>
-            <span>${escapeHtml(chat.title || 'Новый чат')}</span>
+            <span>${escapeHtml(chat.title || 'New chat')}</span>
             <button class="chat-delete-btn" onclick="deleteChat('${chat.id}', event)" title="Удалить">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6L6 18M6 6l12 12"/>
@@ -971,6 +971,10 @@ function renderResponse(container) {
 // Update handleStreamData to use renderResponse
 function handleStreamData(data, contentDiv) {
     const responseText = contentDiv.querySelector('.response-text');
+    const removeSteps = () => {
+        const steps = contentDiv.querySelector('.steps-container');
+        if (steps) steps.remove();
+    };
 
     switch (data.type) {
         case 'generating':
@@ -1010,6 +1014,12 @@ function handleStreamData(data, contentDiv) {
             break;
         }
 
+        case 'tool_result':
+        case 'tool_complete':
+            // Tool execution completed - remove the loading indicator
+            removeSteps();
+            break;
+
         case 'artifact': {
             // Update step to complete
             const loadingIcon = contentDiv.querySelector('.step-icon.loading');
@@ -1042,7 +1052,16 @@ function handleStreamData(data, contentDiv) {
 
         case 'text':
             // Remove loading steps if they were used for initial loading (not current arch)
+            // But verify we aren't interrupting a tool execution
             if (responseText) {
+                const steps = contentDiv.querySelector('.steps-container');
+                const stepText = steps ? steps.querySelector('.step-text') : null;
+
+                // Only remove if it's NOT a tool step (tool steps contain "Creating")
+                if (steps && (!stepText || !stepText.textContent.includes('Creating'))) {
+                    removeSteps();
+                }
+
                 if (!responseText.dataset.rawText) responseText.dataset.rawText = '';
                 responseText.dataset.rawText += data.content;
                 renderResponse(responseText);
@@ -1050,10 +1069,12 @@ function handleStreamData(data, contentDiv) {
             break;
 
         case 'error':
+            removeSteps();
             contentDiv.innerHTML += `<p style="color: #ef4444">${data.message}</p>`;
             break;
 
         case 'done':
+            removeSteps();
             scrollToBottom();
             break;
     }
@@ -1205,6 +1226,28 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Format a date string as relative time (e.g., "2 hours ago")
+ * @param {string} dateString - ISO date string
+ * @returns {string} Relative time string
+ */
+function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+    if (diffDay < 7) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+
+    return date.toLocaleDateString();
 }
 
 function scrollToBottom() {

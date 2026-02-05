@@ -64,3 +64,9 @@ logs/
 .gemini/
 .zencoder/
 .zenflow/
+
+# Local Data
+data/soul.json
+data/projects.json
+data/mcp-servers.json
+data/artifacts/

@@ -2440,12 +2440,7 @@ body.resizing * {
     border-radius: 4px;
     color: var(--text-tertiary);
     cursor: pointer;
-    opacity: 0;
     transition: all 0.15s ease;
-}
-
-.project-file-item:hover .project-file-delete {
-    opacity: 1;
 }
 
 .project-file-delete:hover {
@@ -3595,4 +3590,133 @@ body.resizing * {
 .soul-history-change-key {
     color: var(--accent);
     font-weight: 500;
+}
+
+/* =================================
+   RAG Status Section
+   ================================= */
+
+.rag-status-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.rag-status-section>label {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.rag-status-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-height: 60px;
+}
+
+.rag-status-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.rag-status-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rag-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.rag-status-badge svg {
+    width: 16px;
+    height: 16px;
+}
+
+.rag-status-badge.indexed {
+    color: #22c55e;
+}
+
+.rag-status-badge.not-indexed {
+    color: var(--text-muted);
+}
+
+.rag-status-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.rag-status-stats strong {
+    color: var(--text-primary);
+}
+
+.rag-status-time {
+    color: var(--text-muted);
+}
+
+.rag-status-success {
+    color: #22c55e;
+}
+
+.rag-status-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.rag-status-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ef4444;
+    font-size: 13px;
+}
+
+.rag-status-error svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.rag-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.rag-actions .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rag-actions .btn-secondary svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Spinner small */
+.spinner-small {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
 }

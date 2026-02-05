@@ -19,6 +19,24 @@
  */
 
 // =================================
+// File Utilities
+// =================================
+
+/**
+ * Read file content as text
+ * @param {File} file - File object from input
+ * @returns {Promise<string>} - File content as text
+ */
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
+// =================================
 // Project State
 // =================================
 
@@ -560,6 +578,33 @@ function showProjectModal(project = null) {
                     </button>
                 </div>
             </div>
+            
+            ${isEdit ? `
+            <div class="form-group rag-status-section">
+                <label>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 4px;">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    RAG Index Status
+                </label>
+                <div class="rag-status-container" id="ragStatusContainer">
+                    <div class="rag-status-loading">
+                        <span class="spinner-small"></span>
+                        Checking index status...
+                    </div>
+                </div>
+                <div class="rag-actions">
+                    <button type="button" class="btn-secondary btn-sm" id="btnReindex" onclick="handleReindexProject('${project.id}')" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6"/>
+                            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                        </svg>
+                        Reindex Files
+                    </button>
+                </div>
+            </div>
+            ` : ''}
         `;
         return html;
     };
@@ -667,7 +712,162 @@ function showProjectModal(project = null) {
     setTimeout(() => {
         document.getElementById('projectName')?.focus();
     }, 100);
+
+    // Load RAG status for existing projects
+    if (isEdit && project?.id) {
+        loadRAGStatus(project.id);
+    }
 }
+
+// =================================
+// RAG Status Functions
+// =================================
+
+/**
+ * Load and display RAG status for a project
+ * @param {string} projectId
+ */
+async function loadRAGStatus(projectId) {
+    const container = document.getElementById('ragStatusContainer');
+    const reindexBtn = document.getElementById('btnReindex');
+
+    if (!container) return;
+
+    try {
+        const response = await fetch(`/api/projects/${projectId}/rag/status`);
+        const status = await response.json();
+
+        if (status.exists) {
+            container.innerHTML = `
+                <div class="rag-status-info">
+                    <div class="rag-status-badge indexed">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                        Indexed
+                    </div>
+                    <div class="rag-status-stats">
+                        <span><strong>${status.chunkCount}</strong> chunks</span>
+                        <span><strong>${status.fileCount}</strong> files</span>
+                        ${status.lastUpdated ? `<span class="rag-status-time">Updated ${formatRelativeTime(status.lastUpdated)}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="rag-status-info">
+                    <div class="rag-status-badge not-indexed">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Not Indexed
+                    </div>
+                    <p class="rag-status-hint">Add files and click "Reindex Files" to enable semantic search</p>
+                </div>
+            `;
+        }
+
+        if (reindexBtn) {
+            reindexBtn.disabled = false;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="rag-status-error">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M15 9l-6 6M9 9l6 6"/>
+                </svg>
+                <span>RAG service unavailable</span>
+            </div>
+        `;
+        console.warn('Failed to load RAG status:', error);
+    }
+}
+
+/**
+ * Handle reindex button click
+ * @param {string} projectId
+ */
+window.handleReindexProject = async function (projectId) {
+    const container = document.getElementById('ragStatusContainer');
+    const reindexBtn = document.getElementById('btnReindex');
+
+    if (!container || !reindexBtn) return;
+
+    // Show loading state
+    reindexBtn.disabled = true;
+    reindexBtn.innerHTML = `
+        <span class="spinner-small"></span>
+        Reindexing...
+    `;
+
+    container.innerHTML = `
+        <div class="rag-status-loading">
+            <span class="spinner-small"></span>
+            Indexing project files...
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`/api/projects/${projectId}/rag/reindex`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error.message || 'Reindex failed');
+        }
+
+        container.innerHTML = `
+            <div class="rag-status-info">
+                <div class="rag-status-badge indexed">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Indexed
+                </div>
+                <div class="rag-status-stats">
+                    <span><strong>${result.chunks || 0}</strong> chunks</span>
+                    <span><strong>${result.indexed || 0}</strong> files</span>
+                    <span class="rag-status-success">Just now</span>
+                </div>
+            </div>
+        `;
+
+        // Show success notification
+        if (typeof showNotification === 'function') {
+            showNotification(`Indexed ${result.indexed} files (${result.chunks} chunks)`, 'success');
+        }
+
+    } catch (error) {
+        container.innerHTML = `
+            <div class="rag-status-error">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M15 9l-6 6M9 9l6 6"/>
+                </svg>
+                <span>Indexing failed: ${error.message}</span>
+            </div>
+        `;
+        console.error('Reindex failed:', error);
+    } finally {
+        // Restore button
+        reindexBtn.disabled = false;
+        reindexBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6M1 20v-6h6"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+            Reindex Files
+        `;
+    }
+};
 
 // Helper to handle modal files
 window.handleModalFiles = function (files) {
@@ -859,6 +1059,7 @@ function openEditProjectModal(projectId) {
  * Close the project modal
  */
 function closeProjectModal() {
+    pendingUploads = [];
     const modal = document.getElementById('projectModal');
     if (modal) {
         modal.classList.remove('open');
@@ -1516,19 +1717,25 @@ async function uploadProjectFiles(projectId, files) {
 
     try {
         for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
+            // Read file content as text for RAG indexing
+            const content = await readFileAsText(file);
 
             const res = await fetch(`/api/projects/${projectId}/files`, {
                 method: 'POST',
-                body: formData,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    name: file.name,
+                    path: file.name,
+                    content: content
+                }),
             });
 
             if (res.ok) {
                 const fileInfo = await res.json();
                 // Add to local project state
                 if (!project.files) project.files = [];
-                project.files.push(fileInfo);
+                project.files.push(fileInfo.file || fileInfo);
             } else {
                 console.error('Failed to upload file:', file.name);
             }
@@ -1592,19 +1799,7 @@ window.handleModalFileDelete = async function (btn, projectId, fileId) {
  * @returns {Promise<boolean>}
  */
 async function deleteProjectFile(projectId, fileId) {
-    // Note: Confirmation passed validation in handleModalFileDelete if called from there.
-    // But if called from elsewhere, we might want to check?
-    // The old implementation had confirm inside.
-    // Let's keep confirm inside IF we are not calling from handleModalFileDelete?
-    // No, let's remove confirm from here to let caller handle UI.
-    // BUT legacy calls might rely on it.
-    // Actually, I only use it in deleteProjectFile (legacy) and now handleModalFileDelete.
-    // Let's support both or just refactor.
-    // Since I'm changing the onclick in modal to call handleModalFileDelete, I can remove confirm from deleteProjectFile OR make it optional.
-    // I'll make deleteProjectFile purely API wrapper + state update, and move UI (confirm) out.
-    // BUT I need to check other usages.
-    // Usage 1: `renderProjectFilesList` (legacy panel) -> `onclick="deleteProjectFile(...)"`. This panel is removed/hidden.
-    // Usage 2: `handleModalFileDelete` -> uses it.
+    if (!confirm('Are you sure you want to delete this file?')) return false;
 
     try {
         const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, {
@@ -1616,12 +1811,39 @@ async function deleteProjectFile(projectId, fileId) {
             const project = getProject(projectId);
             if (project && project.files) {
                 project.files = project.files.filter(f => f.id !== fileId);
+
+                // Update UI: Find the file item and remove it
+                const fileItem = document.querySelector(`.project-file-item[data-file-id="${fileId}"]`);
+                if (fileItem) {
+                    fileItem.remove();
+                } else {
+                    // Fallback to updating the whole list if item not found by selector (e.g. pending list uses different structure)
+                    const filesList = document.getElementById('projectFilesList');
+                    if (filesList) {
+                        filesList.innerHTML = renderProjectFilesList(project);
+                    }
+                }
+
+                // Update counts
+                const countLabel = document.querySelector('.project-files-header label');
+                if (countLabel) {
+                    countLabel.textContent = `Project Files (${project.files.length})`;
+                }
+
+                // If list became empty
+                const filesList = document.getElementById('projectFilesList');
+                if (filesList && project.files.length === 0) {
+                    filesList.innerHTML = `<div class="project-files-empty"><span>No files uploaded yet</span></div>`;
+                }
+
+                // Logic for pending files is handled by separate removePendingFile
             }
             return true;
         }
         return false;
     } catch (err) {
         console.error('Delete file error:', err);
+        alert('Failed to delete file');
         return false;
     }
 }
@@ -1731,6 +1953,91 @@ window.addEventListener('hashchange', handleRoute);
 // =================================
 // Initialize
 // =================================
+
+/**
+ * Handle file input selection
+ */
+window.handleFileSelect = function (event, projectId) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    if (projectId && projectId !== 'null' && projectId !== 'undefined') {
+        uploadProjectFiles(projectId, files);
+    } else {
+        // Add to pending uploads
+        Array.from(files).forEach(file => pendingUploads.push(file));
+
+        // Update UI counters
+        const countLabel = document.querySelector('.project-files-header label');
+        if (countLabel) {
+            countLabel.textContent = `Project Files (${pendingUploads.length})`;
+        }
+
+        // Render pending files list
+        const filesList = document.getElementById('projectFilesList');
+        if (filesList) {
+            filesList.innerHTML = pendingUploads.map((file, index) => `
+                <div class="project-file-item new-file">
+                    <div class="project-file-icon">
+                        ${getFileIcon(file.name)}
+                    </div>
+                    <div class="project-file-info">
+                        <span class="project-file-name">${escapeHtml(file.name)}</span>
+                        <span class="project-file-size">${formatFileSize(file.size)}</span>
+                        <span class="file-status-badge new">Pending</span>
+                    </div>
+                    <button class="project-file-delete" onclick="removePendingFile(${index})" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+
+            // Show empty state removed implicitly by setting innerHTML
+        }
+    }
+
+    // Reset input
+    event.target.value = '';
+};
+
+/**
+ * Remove pending file
+ */
+window.removePendingFile = function (index) {
+    pendingUploads.splice(index, 1);
+    // Re-render
+    const filesList = document.getElementById('projectFilesList');
+    if (filesList) {
+        if (pendingUploads.length === 0) {
+            filesList.innerHTML = `<div class="project-files-empty"><span>No files uploaded yet</span></div>`;
+        } else {
+            filesList.innerHTML = pendingUploads.map((file, idx) => `
+                <div class="project-file-item new-file">
+                    <div class="project-file-icon">
+                        ${getFileIcon(file.name)}
+                    </div>
+                    <div class="project-file-info">
+                        <span class="project-file-name">${escapeHtml(file.name)}</span>
+                        <span class="project-file-size">${formatFileSize(file.size)}</span>
+                        <span class="file-status-badge new">Pending</span>
+                    </div>
+                    <button class="project-file-delete" onclick="removePendingFile(${idx})" type="button">
+                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        const countLabel = document.querySelector('.project-files-header label');
+        if (countLabel) {
+            countLabel.textContent = `Project Files (${pendingUploads.length})`;
+        }
+    }
+};
 
 function initProjects() {
     loadProjects();
