@@ -150,7 +150,8 @@ async function createProject(data) {
 
         if (!res.ok) throw new Error('Failed to create project');
 
-        const project = await res.json();
+        const result = await res.json();
+        const project = result.project || result;
         projectState.projects.unshift(project);
         renderProjectsView();
         updateSidebarProjects();
@@ -177,7 +178,8 @@ async function updateProject(id, data) {
 
         if (!res.ok) throw new Error('Failed to update project');
 
-        const updatedProject = await res.json();
+        const result = await res.json();
+        const updatedProject = result.project || result;
 
         const index = projectState.projects.findIndex(p => p.id === id);
         if (index !== -1) {

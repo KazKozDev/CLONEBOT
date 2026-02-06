@@ -413,6 +413,16 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
                     if (project?.systemPrompt) {
                         baseSystemPrompt += `${project.systemPrompt}\n\n`;
                     }
+
+                    // Add RAG context from project files
+                    try {
+                        const ragContext = await ragService.getContext(projectId, prompt, { topK: 5 });
+                        if (ragContext.context) {
+                            baseSystemPrompt += `--- Relevant context from project files ---\n${ragContext.context}\n--- End of context ---\n\n`;
+                        }
+                    } catch (ragErr: any) {
+                        console.warn('RAG context retrieval failed (deep thinking):', ragErr.message);
+                    }
                 }
 
                 if (userProfileStore) {
@@ -510,8 +520,10 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
                 // Add project system prompt if available
                 if (projectId) {
                     const project = store.getProject(projectId);
+                    let additionalPrompt = '';
+
                     if (project?.systemPrompt) {
-                        contextOptions.systemPrompt = project.systemPrompt;
+                        additionalPrompt = project.systemPrompt;
                     }
 
                     // Add RAG context from project files
@@ -519,12 +531,15 @@ export function installWebUIRoutes(server: GatewayServer, options: WebUIRoutesOp
                         const ragContext = await ragService.getContext(projectId, prompt, { topK: 5 });
                         if (ragContext.context) {
                             contextOptions.ragContext = ragContext.context;
-                            // Prepend RAG context to system prompt
                             const ragHeader = `\n\n--- Relevant context from project files ---\n${ragContext.context}\n--- End of context ---\n\n`;
-                            contextOptions.systemPrompt = (contextOptions.systemPrompt || '') + ragHeader;
+                            additionalPrompt = additionalPrompt + ragHeader;
                         }
                     } catch (ragErr: any) {
                         console.warn('RAG context retrieval failed:', ragErr.message);
+                    }
+
+                    if (additionalPrompt) {
+                        contextOptions.additionalSystemPrompt = additionalPrompt;
                     }
                 }
 
